@@ -20,7 +20,8 @@
 
 namespace bustub {
 
-Tuple::Tuple(std::vector<Value> values, Schema *schema) : allocated_(true) {
+// TODO(Amadou): It does not look like nulls are supported. Add a null bitmap?
+Tuple::Tuple(std::vector<Value> values, const Schema *schema) : allocated_(true) {
   assert(values.size() == schema->GetColumnCount());
 
   // 1. Calculate the size of the tuple.
@@ -32,6 +33,7 @@ Tuple::Tuple(std::vector<Value> values, Schema *schema) : allocated_(true) {
   // 2. Allocate memory.
   size_ = tuple_size;
   data_ = new char[size_];
+  std::memset(data_, 0, size_);
 
   // 3. Serialize each attribute based on the input value.
   uint32_t column_count = schema->GetColumnCount();
@@ -53,6 +55,9 @@ Tuple::Tuple(std::vector<Value> values, Schema *schema) : allocated_(true) {
 
 Tuple::Tuple(const Tuple &other) : allocated_(other.allocated_), rid_(other.rid_), size_(other.size_) {
   if (allocated_) {
+    delete[] data_;
+  }
+  if (allocated_) {
     // Deep copy.
     data_ = new char[size_];
     memcpy(data_, other.data_, size_);
@@ -63,6 +68,9 @@ Tuple::Tuple(const Tuple &other) : allocated_(other.allocated_), rid_(other.rid_
 }
 
 Tuple &Tuple::operator=(const Tuple &other) {
+  if (allocated_) {
+    delete[] data_;
+  }
   allocated_ = other.allocated_;
   rid_ = other.rid_;
   size_ = other.size_;
@@ -79,7 +87,7 @@ Tuple &Tuple::operator=(const Tuple &other) {
   return *this;
 }
 
-Value Tuple::GetValue(Schema *schema, const uint32_t column_idx) const {
+Value Tuple::GetValue(const Schema *schema, const uint32_t column_idx) const {
   assert(schema);
   assert(data_);
   const TypeId column_type = schema->GetColumn(column_idx).GetType();
@@ -88,7 +96,7 @@ Value Tuple::GetValue(Schema *schema, const uint32_t column_idx) const {
   return Value::DeserializeFrom(data_ptr, column_type);
 }
 
-const char *Tuple::GetDataPtr(Schema *schema, const uint32_t column_idx) const {
+const char *Tuple::GetDataPtr(const Schema *schema, const uint32_t column_idx) const {
   assert(schema);
   assert(data_);
   const auto &col = schema->GetColumn(column_idx);
@@ -103,7 +111,7 @@ const char *Tuple::GetDataPtr(Schema *schema, const uint32_t column_idx) const {
   return (data_ + offset);
 }
 
-std::string Tuple::ToString(Schema *schema) const {
+std::string Tuple::ToString(const Schema *schema) const {
   std::stringstream os;
 
   int column_count = schema->GetColumnCount();
